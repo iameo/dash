@@ -69,18 +69,14 @@ import {
 import {createAction} from 'redux-actions';
 
 import Registry from './registry';
+import {stringifyId} from './actions/dependencies';
 
 export const storePrefix = '_dash_persistence.';
 
 function err(e) {
     const error = typeof e === 'string' ? new Error(e) : e;
 
-    // Send this to the console too, so it's still available with debug off
-    /* eslint-disable-next-line no-console */
-    console.error(e);
-
     return createAction('ON_ERROR')({
-        myID: storePrefix,
         type: 'frontEnd',
         error,
     });
@@ -275,7 +271,7 @@ const getTransform = (element, propName, propPart) =>
         : noopTransform;
 
 const getValsKey = (id, persistedProp, persistence) =>
-    `${id}.${persistedProp}.${JSON.stringify(persistence)}`;
+    `${stringifyId(id)}.${persistedProp}.${JSON.stringify(persistence)}`;
 
 const getProps = layout => {
     const {props, type, namespace} = layout;

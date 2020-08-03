@@ -1,24 +1,20 @@
-import {
-    concat,
-    equals,
-    filter,
-    forEach,
-    isEmpty,
-    keys,
-    lensPath,
-    view,
-} from 'ramda';
+import {forEach, isEmpty, keys, path} from 'ramda';
 import {combineReducers} from 'redux';
-import layout from './layout';
-import graphs from './dependencyGraph';
-import paths from './paths';
-import requestQueue from './requestQueue';
-import appLifecycle from './appLifecycle';
-import history from './history';
-import error from './error';
-import hooks from './hooks';
+
+import {getCallbacksByInput} from '../actions/dependencies_ts';
+
 import createApiReducer from './api';
+import appLifecycle from './appLifecycle';
+import callbacks from './callbacks';
 import config from './config';
+import graphs from './dependencyGraph';
+import error from './error';
+import history from './history';
+import hooks from './hooks';
+import isLoading from './isLoading';
+import layout from './layout';
+import loadingMap from './loadingMap';
+import paths from './paths';
 
 export const apiRequests = [
     'dependenciesRequest',
@@ -30,14 +26,16 @@ export const apiRequests = [
 function mainReducer() {
     const parts = {
         appLifecycle,
-        layout,
-        graphs,
-        paths,
-        requestQueue,
+        callbacks,
         config,
-        history,
         error,
+        graphs,
+        history,
         hooks,
+        isLoading,
+        layout,
+        loadingMap,
+        paths,
     };
     forEach(r => {
         parts[r] = createApiReducer(r);
@@ -48,22 +46,14 @@ function mainReducer() {
 
 function getInputHistoryState(itempath, props, state) {
     const {graphs, layout, paths} = state;
-    const {InputGraph} = graphs;
-    const keyObj = filter(equals(itempath), paths);
+    const idProps = path(itempath.concat(['props']), layout);
+    const {id} = idProps || {};
     let historyEntry;
-    if (!isEmpty(keyObj)) {
-        const id = keys(keyObj)[0];
+    if (id) {
         historyEntry = {id, props: {}};
         keys(props).forEach(propKey => {
-            const inputKey = `${id}.${propKey}`;
-            if (
-                InputGraph.hasNode(inputKey) &&
-                InputGraph.dependenciesOf(inputKey).length > 0
-            ) {
-                historyEntry.props[propKey] = view(
-                    lensPath(concat(paths[id], ['props', propKey])),
-                    layout
-                );
+            if (getCallbacksByInput(graphs, paths, id, propKey).length) {
+                historyEntry.props[propKey] = idProps[propKey];
             }
         });
     }
